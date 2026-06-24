@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+<meta name="theme-color" content="#1D9E75">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<title>Mon Jour</title>
+<link rel="manifest" href="manifest.json">
+<style>
+:root {
+  --teal:#1D9E75; --teal-d:#0F6E56; --teal-l:#E1F5EE;
+  --purple:#534AB7; --purple-l:#EEEDFE;
+  --amber:#BA7517; --amber-l:#FAEEDA;
+  --coral:#D85A30; --coral-l:#FAECE7;
+  --blue:#378ADD; --blue-l:#E6F1FB;
+  --bg:#f8f7f4; --surface:#fff;
+  --border:#e5e3dc; --text:#1a1a1a; --muted:#6b6b65;
+  --radius:14px; --radius-sm:10px;
+}
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; background:var(--bg); font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; color:var(--text); }
+body { display:flex; flex-direction:column; max-width:480px; margin:0 auto; }
+ 
+/* HEADER */
+.header { background:var(--surface); border-bottom:0.5px solid var(--border); padding:16px 20px 12px; position:sticky; top:0; z-index:10; }
+.header-top { display:flex; align-items:center; justify-content:space-between; }
+.app-title { font-size:18px; font-weight:600; color:var(--text); }
+.date-str { font-size:12px; color:var(--muted); margin-top:2px; }
+.header-btn { background:none; border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:6px 12px; font-size:13px; color:var(--muted); cursor:pointer; }
+.header-btn:active { background:var(--bg); }
+ 
+/* PROGRESS BAR */
+.progress-wrap { padding:12px 20px 0; }
+.progress-label { display:flex; justify-content:space-between; font-size:12px; color:var(--muted); margin-bottom:6px; }
+.progress-track { background:var(--border); border-radius:20px; height:5px; overflow:hidden; }
+.progress-fill { height:100%; background:var(--teal); border-radius:20px; transition:width .4s ease; }
+.progress-msg { font-size:12px; color:var(--teal); margin-top:5px; font-weight:500; min-height:18px; }
+ 
+/* TABS */
+.tabs { display:flex; gap:6px; padding:12px 20px 0; overflow-x:auto; scrollbar-width:none; }
+.tabs::-webkit-scrollbar { display:none; }
+.tab { flex-shrink:0; padding:6px 14px; border-radius:20px; border:0.5px solid var(--border); font-size:13px; color:var(--muted); background:var(--surface); cursor:pointer; transition:all .15s; }
+.tab.on { background:var(--teal); color:#fff; border-color:var(--teal); font-weight:500; }
+ 
+/* MAIN */
+main { flex:1; overflow-y:auto; padding:14px 20px 100px; }
+ 
+/* OBJECTIVE CARD */
+.obj-section { margin-bottom:18px; }
+.obj-section-title { font-size:11px; font-weight:500; color:var(--muted); text-transform:uppercase; letter-spacing:.06em; margin-bottom:8px; display:flex; align-items:center; gap:6px; }
+.obj-card { background:var(--surface); border:0.5px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; display:flex; align-items:center; gap:14px; cursor:pointer; transition:all .2s; position:relative; overflow:hidden; }
+.obj-card:active { transform:scale(0.98); }
+.obj-card.done { opacity:.55; }
+.obj-card.done .obj-text { text-decoration:line-through; color:var(--muted); }
+.obj-card.locked { opacity:.35; pointer-events:none; }
+.obj-card.next-up { border-color:var(--teal); box-shadow:0 0 0 1.5px var(--teal); }
+.obj-check { width:24px; height:24px; border-radius:50%; border:2px solid var(--border); flex-shrink:0; display:flex; align-items:center; justify-content:center; transition:all .2s; }
+.obj-card.done .obj-check { background:var(--teal); border-color:var(--teal); }
+.obj-card.done .obj-check::after { content:''; display:block; width:6px; height:10px; border:2px solid #fff; border-top:none; border-left:none; transform:rotate(45deg) translate(-1px,-1px); }
+.obj-card.next-up .obj-check { border-color:var(--teal); }
+.obj-info { flex:1; min-width:0; }
+.obj-text { font-size:14px; color:var(--text); line-height:1.4; }
+.obj-sub { font-size:12px; color:var(--muted); margin-top:2px; }
+.obj-badge { font-size:10px; padding:2px 7px; border-radius:20px; font-weight:500; flex-shrink:0; }
+.locked-icon { font-size:16px; opacity:.4; }
+ 
+/* CONFETTI ANIMATION */
+@keyframes pop { 0%{transform:scale(0.8);opacity:0} 60%{transform:scale(1.1)} 100%{transform:scale(1);opacity:1} }
+.obj-card.just-done { animation:pop .25s ease; }
+ 
+/* ADD BUTTON */
+.fab { position:fixed; bottom:24px; right:24px; width:56px; height:56px; border-radius:50%; background:var(--teal); color:#fff; border:none; font-size:28px; cursor:pointer; box-shadow:0 4px 16px rgba(29,158,117,.4); display:flex; align-items:center; justify-content:center; transition:all .15s; z-index:20; }
+.fab:active { transform:scale(0.93); background:var(--teal-d); }
+ 
+/* MODAL */
+.modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:30; align-items:flex-end; }
+.modal-overlay.open { display:flex; }
+.modal { background:var(--surface); border-radius:var(--radius) var(--radius) 0 0; padding:20px 20px 40px; width:100%; animation:slideUp .25s ease; }
+@keyframes slideUp { from{transform:translateY(100%)} to{transform:translateY(0)} }
+.modal-title { font-size:16px; font-weight:500; margin-bottom:16px; }
+.modal-handle { width:36px; height:4px; background:var(--border); border-radius:4px; margin:0 auto 16px; }
+label { font-size:12px; color:var(--muted); display:block; margin-bottom:4px; margin-top:12px; }
+label:first-of-type { margin-top:0; }
+input, select, textarea { background:var(--bg); border:0.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-size:14px; color:var(--text); width:100%; outline:none; font-family:inherit; }
+input:focus, select:focus { border-color:var(--teal); }
+.modal-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.btn-primary { background:var(--teal); color:#fff; border:none; border-radius:var(--radius-sm); padding:13px; font-size:15px; font-weight:500; width:100%; cursor:pointer; margin-top:16px; font-family:inherit; }
+.btn-primary:active { background:var(--teal-d); }
+ 
+/* EMPTY STATE */
+.empty { text-align:center; padding:40px 20px; color:var(--muted); }
+.empty-icon { font-size:40px; margin-bottom:10px; }
+.empty-title { font-size:15px; font-weight:500; color:var(--text); margin-bottom:6px; }
+.empty-sub { font-size:13px; line-height:1.5; }
+ 
+/* COMPLETION SCREEN */
+.done-screen { display:none; flex-direction:column; align-items:center; justify-content:center; padding:40px 20px; text-align:center; min-height:60vh; }
+.done-screen.show { display:flex; }
+.done-emoji { font-size:60px; margin-bottom:16px; animation:pop .4s ease; }
+.done-title { font-size:22px; font-weight:600; margin-bottom:8px; }
+.done-sub { font-size:14px; color:var(--muted); line-height:1.6; max-width:280px; }
+ 
+/* SETTINGS */
+.settings-row { display:flex; align-items:center; justify-content:space-between; padding:12px 0; border-bottom:0.5px solid var(--border); }
+.settings-row:last-child { border-bottom:none; }
+.settings-label { font-size:14px; color:var(--text); }
+.settings-sub { font-size:12px; color:var(--muted); }
+.danger-btn { background:none; border:0.5px solid #E24B4A; color:#E24B4A; border-radius:var(--radius-sm); padding:8px 14px; font-size:13px; cursor:pointer; font-family:inherit; }
+</style>
+</head>
+<body>
+ 
+<div class="header">
+  <div class="header-top">
+    <div>
+      <div class="app-title">Mon Jour</div>
+      <div class="date-str" id="date-str"></div>
+    </div>
+    <button class="header-btn" onclick="showTab('settings')">⚙</button>
+  </div>
+  <div class="progress-wrap" id="progress-wrap" style="padding-left:0;padding-right:0;margin-top:10px">
+    <div class="progress-label">
+      <span id="prog-label">0 / 0 objectifs</span>
+      <span id="prog-pct">0%</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="prog-fill" style="width:0%"></div></div>
+    <div class="progress-msg" id="prog-msg"></div>
+  </div>
+</div>
+ 
+<div class="tabs" id="tabs">
+  <button class="tab on" onclick="showTab('all',this)">Tout</button>
+  <button class="tab" onclick="showTab('matin',this)">🌅 Matin</button>
+  <button class="tab" onclick="showTab('journee',this)">☀️ Journée</button>
+  <button class="tab" onclick="showTab('soir',this)">🌙 Soir</button>
+  <button class="tab" onclick="showTab('sport',this)">🏃 Sport</button>
+  <button class="tab" onclick="showTab('cours',this)">📚 Cours</button>
+</div>
+ 
+<main id="main-content"></main>
+ 
+<div class="done-screen" id="done-screen">
+  <div class="done-emoji">🎉</div>
+  <div class="done-title">Journée accomplie !</div>
+  <div class="done-sub">Tu as coché tous tes objectifs du jour. Repose-toi bien ce soir.</div>
+</div>
+ 
+<button class="fab" onclick="openModal()" id="fab">+</button>
+ 
+<!-- ADD MODAL -->
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Nouvel objectif</div>
+    <label>Objectif</label>
+    <input type="text" id="f-text" placeholder="Ex : 45 min de cours physique..." maxlength="80">
+    <div class="modal-row">
+      <div>
+        <label>Moment</label>
+        <select id="f-moment">
+          <option value="matin">🌅 Matin</option>
+          <option value="journee">☀️ Journée</option>
+          <option value="soir">🌙 Soir</option>
+        </select>
+      </div>
+      <div>
+        <label>Catégorie</label>
+        <select id="f-cat">
+          <option value="sport">🏃 Sport</option>
+          <option value="cours">📚 Cours</option>
+          <option value="maker">⚙️ Maker</option>
+          <option value="sante">💊 Santé</option>
+          <option value="perso">⭐ Perso</option>
+          <option value="lecture">📖 Lecture</option>
+        </select>
+      </div>
+    </div>
+    <label>Détail (optionnel)</label>
+    <input type="text" id="f-sub" placeholder="Ex : Chapitre 4 cinématique" maxlength="60">
+    <label>Se débloque après (optionnel)</label>
+    <select id="f-after">
+      <option value="">Disponible dès le début</option>
+    </select>
+    <button class="btn-primary" id="modal-save-btn" onclick="saveObj()">Ajouter</button>
+    <button id="modal-delete-btn" style="display:none;width:100%;margin-top:10px;background:none;border:0.5px solid #E24B4A;color:#E24B4A;border-radius:var(--radius-sm);padding:12px;font-size:14px;cursor:pointer;font-family:inherit" onclick="deleteObj()">🗑 Supprimer cet objectif</button>
+  </div>
+</div>
+ 
+<!-- SETTINGS PAGE (hidden in main) -->
+<div id="settings-page" style="display:none;padding:20px">
+  <div style="font-size:16px;font-weight:500;margin-bottom:16px">Paramètres</div>
+  <div class="settings-row">
+    <div><div class="settings-label">Objectifs par défaut</div><div class="settings-sub">Réinitialiser avec les objectifs du plan</div></div>
+    <button class="header-btn" onclick="loadDefaults()">Charger</button>
+  </div>
+  <div class="settings-row">
+    <div><div class="settings-label">Reset quotidien</div><div class="settings-sub">Tout décocher (nouveau jour)</div></div>
+    <button class="header-btn" onclick="resetDay()">Reset</button>
+  </div>
+  <div class="settings-row">
+    <div><div class="settings-label">Effacer tout</div><div class="settings-sub">Supprimer tous les objectifs</div></div>
+    <button class="danger-btn" onclick="clearAll()">Effacer</button>
+  </div>
+  <div style="margin-top:20px;font-size:12px;color:var(--muted);line-height:1.6">
+    <strong>Comment installer sur Android :</strong><br>
+    Ouvre ce fichier dans Chrome → menu ⋮ → "Ajouter à l'écran d'accueil" → l'app apparaît comme une vraie application.
+  </div>
+</div>
+ 
+<script>
+const SKEY = 'monjour_v1';
+ 
+const CAT_COLORS = {
+  sport:  {bg:'var(--coral-l)',  color:'var(--coral)',  text:'Sport'},
+  cours:  {bg:'var(--blue-l)',   color:'var(--blue)',   text:'Cours'},
+  maker:  {bg:'var(--teal-l)',   color:'var(--teal)',   text:'Maker'},
+  sante:  {bg:'var(--teal-l)',   color:'var(--teal)',   text:'Santé'},
+  perso:  {bg:'var(--amber-l)',  color:'var(--amber)',  text:'Perso'},
+  lecture:{bg:'var(--purple-l)', color:'var(--purple)', text:'Lecture'},
+};
+ 
+const MOMENT_LABELS = { matin:'🌅 Matin', journee:'☀️ Journée', soir:'🌙 Soir' };
+ 
+const DEFAULTS = [
+  {id:'d1', text:'Lever à 7h — sans snooze', sub:'', moment:'matin', cat:'perso', done:false, after:''},
+  {id:'d2', text:'Pas de téléphone 30 min', sub:'Face cachée sur la table', moment:'matin', cat:'perso', done:false, after:'d1'},
+  {id:'d3', text:'Étirements mollets', sub:'5 min — rééducation périostite', moment:'matin', cat:'sante', done:false, after:''},
+  {id:'d4', text:'3 priorités écrites', sub:'Sur papier avant de partir', moment:'matin', cat:'perso', done:false, after:''},
+  {id:'d5', text:'Bloc de cours — 45 min', sub:'Téléphone retourné', moment:'journee', cat:'cours', done:false, after:''},
+  {id:'d6', text:'Sport ou mouvement', sub:'Selon programme du jour', moment:'journee', cat:'sport', done:false, after:''},
+  {id:'d7', text:'10 min exploration', sub:'Wokwi / podcast / article tech', moment:'journee', cat:'maker', done:false, after:''},
+  {id:'d8', text:'Glace tibias', sub:'10 min après sport', moment:'soir', cat:'sante', done:false, after:'d6'},
+  {id:'d9', text:'Bloc cours — 45 min', sub:'Révision active ou exercices', moment:'soir', cat:'cours', done:false, after:''},
+  {id:'d10', text:'10 pages de lecture', sub:'Avant de dormir', moment:'soir', cat:'lecture', done:false, after:''},
+  {id:'d11', text:'Téléphone retourné à 22h30', sub:'Mode ne pas déranger ON', moment:'soir', cat:'perso', done:false, after:''},
+  {id:'d12', text:'Préparer demain', sub:'3 priorités pour le lendemain', moment:'soir', cat:'perso', done:false, after:'d11'},
+];
+ 
+function load() {
+  try { return JSON.parse(localStorage.getItem(SKEY)) || []; } catch(e) { return []; }
+}
+function save(data) { localStorage.setItem(SKEY, JSON.stringify(data)); }
+ 
+let currentTab = 'all';
+let editId = null;
+ 
+function today() { return new Date().toISOString().slice(0,10); }
+ 
+function checkDayReset() {
+  const lastDay = localStorage.getItem('monjour_lastday');
+  const t = today();
+  if (lastDay !== t) {
+    const data = load().map(o => ({...o, done:false}));
+    save(data);
+    localStorage.setItem('monjour_lastday', t);
+  }
+}
+ 
+function render() {
+  const data = load();
+  const content = document.getElementById('main-content');
+  const doneScreen = document.getElementById('done-screen');
+  const settingsPage = document.getElementById('settings-page');
+ 
+  document.getElementById('settings-page').style.display = 'none';
+  doneScreen.classList.remove('show');
+  content.style.display = '';
+ 
+  // Progress
+  const total = data.length;
+  const done = data.filter(o => o.done).length;
+  const pct = total ? Math.round(done/total*100) : 0;
+  document.getElementById('prog-label').textContent = done + ' / ' + total + ' objectifs';
+  document.getElementById('prog-pct').textContent = pct + '%';
+  document.getElementById('prog-fill').style.width = pct + '%';
+  const msgs = ['','Continue comme ça ! 💪','Bien joué, continue !','Plus que la moitié !','Presque là !','Journée accomplie ! 🎉'];
+  document.getElementById('prog-msg').textContent = total && pct > 0 ? (pct === 100 ? msgs[5] : pct >= 75 ? msgs[4] : pct >= 50 ? msgs[3] : pct >= 25 ? msgs[2] : msgs[1]) : '';
+ 
+  if (total > 0 && done === total) {
+    doneScreen.classList.add('show');
+    content.style.display = 'none';
+    return;
+  }
+ 
+  const filter = currentTab === 'all' ? null : currentTab;
+  const moments = filter && ['matin','journee','soir'].includes(filter) ? [filter] : ['matin','journee','soir'];
+  const catFilter = filter && !['matin','journee','soir'].includes(filter) ? filter : null;
+ 
+  let html = '';
+  let hasContent = false;
+ 
+  for (const moment of moments) {
+    let items = data.filter(o => o.moment === moment && (!catFilter || o.cat === catFilter));
+    if (!items.length) continue;
+    hasContent = true;
+ 
+    // Determine unlocked state
+    items = items.map(o => {
+      const afterObj = o.after ? data.find(d => d.id === o.after) : null;
+      const locked = afterObj ? !afterObj.done : false;
+      const nextUp = !o.done && !locked && items.filter(i2 => {
+        const a = i2.after ? data.find(d=>d.id===i2.after) : null;
+        return !i2.done && (!a || a.done);
+      }).length > 0 && items.find(i2 => !i2.done && (!i2.after || (data.find(d=>d.id===i2.after)?.done))) === o;
+      return {...o, locked, nextUp: nextUp && !o.done};
+    });
+ 
+    html += `<div class="obj-section">`;
+    if (!catFilter) html += `<div class="obj-section-title">${MOMENT_LABELS[moment]}</div>`;
+ 
+    for (const o of items) {
+      const c = CAT_COLORS[o.cat] || CAT_COLORS.perso;
+      html += `<div class="obj-card ${o.done?'done':''} ${o.locked?'locked':''} ${o.nextUp?'next-up':''}" 
+        onclick="toggle('${o.id}')" oncontextmenu="openEdit('${o.id}');return false">
+        <div class="obj-check"></div>
+        <div class="obj-info">
+          <div class="obj-text">${o.text}</div>
+          ${o.sub ? `<div class="obj-sub">${o.sub}</div>` : ''}
+        </div>
+        ${o.locked ? '<span class="locked-icon">🔒</span>' : `<span class="obj-badge" style="background:${c.bg};color:${c.color}">${c.text}</span>`}
+      </div>`;
+    }
+    html += `</div>`;
+  }
+ 
+  if (!hasContent) {
+    html = `<div class="empty">
+      <div class="empty-icon">📋</div>
+      <div class="empty-title">Aucun objectif ici</div>
+      <div class="empty-sub">Appuie sur + pour ajouter ton premier objectif, ou charge les objectifs par défaut dans ⚙ Paramètres.</div>
+    </div>`;
+  }
+ 
+  content.innerHTML = html;
+}
+ 
+function toggle(id) {
+  const data = load();
+  const o = data.find(o => o.id === id);
+  if (!o) return;
+  o.done = !o.done;
+  // If unchecking, also uncheck anything that depended on this
+  if (!o.done) {
+    data.forEach(other => { if (other.after === id) other.done = false; });
+  }
+  save(data);
+  render();
+  // Haptic if available
+  if (navigator.vibrate && o.done) navigator.vibrate(40);
+}
+ 
+function showTab(tab, btn) {
+  currentTab = tab;
+  if (tab === 'settings') {
+    document.getElementById('main-content').style.display = 'none';
+    document.getElementById('done-screen').classList.remove('show');
+    document.getElementById('settings-page').style.display = 'block';
+    document.getElementById('fab').style.display = 'none';
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+    return;
+  }
+  document.getElementById('settings-page').style.display = 'none';
+  document.getElementById('fab').style.display = 'flex';
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('on'));
+  if (btn) btn.classList.add('on');
+  render();
+}
+ 
+function openModal(id) {
+  editId = id || null;
+  const data = load();
+  const modal = document.getElementById('modal');
+  const afterSel = document.getElementById('f-after');
+ 
+  // Populate "after" dropdown
+  afterSel.innerHTML = '<option value="">Disponible dès le début</option>';
+  data.filter(o => !id || o.id !== id).forEach(o => {
+    afterSel.innerHTML += `<option value="${o.id}">${o.text.slice(0,40)}</option>`;
+  });
+ 
+  const saveBtn = document.getElementById('modal-save-btn');
+  const delBtn = document.getElementById('modal-delete-btn');
+  if (id) {
+    const o = data.find(o => o.id === id);
+    document.getElementById('modal-title').textContent = 'Modifier';
+    document.getElementById('f-text').value = o.text;
+    document.getElementById('f-sub').value = o.sub || '';
+    document.getElementById('f-moment').value = o.moment;
+    document.getElementById('f-cat').value = o.cat;
+    document.getElementById('f-after').value = o.after || '';
+    saveBtn.textContent = 'Enregistrer';
+    delBtn.style.display = 'block';
+  } else {
+    document.getElementById('modal-title').textContent = 'Nouvel objectif';
+    document.getElementById('f-text').value = '';
+    document.getElementById('f-sub').value = '';
+    document.getElementById('f-moment').value = 'journee';
+    document.getElementById('f-cat').value = 'perso';
+    document.getElementById('f-after').value = '';
+    saveBtn.textContent = 'Ajouter';
+    delBtn.style.display = 'none';
+  }
+  modal.classList.add('open');
+  setTimeout(() => document.getElementById('f-text').focus(), 100);
+}
+ 
+function openEdit(id) {
+  openModal(id);
+}
+ 
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  editId = null;
+}
+ 
+function deleteObj() {
+  if (!editId) return;
+  const data = load().filter(o => o.id !== editId);
+  data.forEach(o => { if (o.after === editId) o.after = ""; });
+  save(data);
+  closeModal();
+  render();
+}
+ 
+function saveObj() {
+  const text = document.getElementById('f-text').value.trim();
+  if (!text) return;
+  const data = load();
+  if (editId) {
+    const o = data.find(o => o.id === editId);
+    if (o) {
+      o.text = text;
+      o.sub = document.getElementById('f-sub').value.trim();
+      o.moment = document.getElementById('f-moment').value;
+      o.cat = document.getElementById('f-cat').value;
+      o.after = document.getElementById('f-after').value;
+    }
+  } else {
+    data.push({
+      id: Date.now().toString(),
+      text,
+      sub: document.getElementById('f-sub').value.trim(),
+      moment: document.getElementById('f-moment').value,
+      cat: document.getElementById('f-cat').value,
+      after: document.getElementById('f-after').value,
+      done: false,
+    });
+  }
+  save(data);
+  closeModal();
+  render();
+}
+ 
+function loadDefaults() {
+  if (!confirm('Charger les objectifs par défaut ? Tes objectifs actuels seront gardés.')) return;
+  const data = load();
+  const existingIds = data.map(o => o.id);
+  const toAdd = DEFAULTS.filter(d => !existingIds.includes(d.id));
+  save([...data, ...toAdd]);
+  render();
+}
+ 
+function resetDay() {
+  if (!confirm('Tout décocher pour un nouveau jour ?')) return;
+  const data = load().map(o => ({...o, done:false}));
+  save(data);
+  localStorage.setItem('monjour_lastday', today());
+  render();
+}
+ 
+function clearAll() {
+  if (!confirm('Effacer tous les objectifs définitivement ?')) return;
+  save([]);
+  render();
+}
+ 
+// Date header
+const now = new Date();
+document.getElementById('date-str').textContent = now.toLocaleDateString('fr-FR', {weekday:'long', day:'numeric', month:'long'});
+ 
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('./sw.js').catch(e => console.log('SW:', e));
+}
+ 
+// Init
+checkDayReset();
+render();
+</script>
+</body>
+</html>
+ 
